@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>三枚のカード — 仮想テーブルより</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow-x:hidden}
+body{
+  font-family:'Noto Serif JP',serif;
+  background:#0a0e22;
+  color:#eae6d4;
+  letter-spacing:.04em;
+  -webkit-font-smoothing:antialiased;
+  position:relative;
+  min-height:100vh;
+}
+.eyebrow{
+  font-family:'Cormorant Garamond',serif;
+  font-style:italic;
+  color:#d4b885;
+  letter-spacing:.3em;
+  font-size:12px;
+  text-transform:uppercase;
+}
+
+/* ---------- cosmos background ---------- */
+#cosmos{
+  position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(ellipse at 30% 15%, rgba(120,80,160,.35), transparent 55%),
+    radial-gradient(ellipse at 75% 70%, rgba(60,70,140,.30), transparent 55%),
+    linear-gradient(180deg,#0a0e22 0%,#141a38 55%,#1c1440 100%);
+}
+.star{position:absolute;border-radius:50%;background:#f0ecda;opacity:.8;animation:twinkle 3.4s ease-in-out infinite}
+@keyframes twinkle{0%,100%{opacity:.15;transform:scale(.8)}50%{opacity:1;transform:scale(1.15)}}
+
+/* ---------- stage ---------- */
+#stage{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:28px 16px 40px}
+header.top{text-align:center;margin-bottom:6px}
+header.top h1{font-size:20px;font-weight:500;letter-spacing:.18em;margin:8px 0 4px;color:#eae6d4}
+header.top .lede{font-size:12px;color:#b9b4a4;font-weight:300;max-width:320px;margin:0 auto}
+#progress{font-family:'Cormorant Garamond',serif;font-style:italic;color:#c9a96e;font-size:13px;letter-spacing:.2em;margin-top:10px;min-height:16px}
+
+/* dealer silhouette */
+#dealer{
+  width:86px;height:96px;margin:6px auto 0;position:relative;
+  animation:sway 6s ease-in-out infinite;
+  transform-origin:50% 100%;
+}
+@keyframes sway{0%,100%{transform:rotate(-2.5deg)}50%{transform:rotate(2.5deg)}}
+#dealer .hood{
+  position:absolute;left:50%;top:0;width:70px;height:70px;transform:translateX(-50%);
+  background:radial-gradient(circle at 50% 35%,#2a2340 0%,#150f28 70%);
+  border-radius:50% 50% 46% 46% / 60% 60% 40% 40%;
+  box-shadow:0 0 22px rgba(160,120,220,.25);
+}
+#dealer .cloak{
+  position:absolute;left:50%;bottom:0;width:96px;height:46px;transform:translateX(-50%);
+  background:linear-gradient(180deg,#1b1533,#0d0a1c);
+  border-radius:50% 50% 40% 40% / 70% 70% 30% 30%;
+}
+#dealer .glow{
+  position:absolute;left:50%;top:30px;width:18px;height:6px;transform:translateX(-50%);
+  background:rgba(200,160,255,.55);filter:blur(3px);border-radius:50%;
+  animation:glowPulse 3.4s ease-in-out infinite;
+}
+@keyframes glowPulse{0%,100%{opacity:.3}50%{opacity:.9}}
+
+/* position slots */
+#slots{display:flex;gap:14px;justify-content:center;margin:14px 0 18px}
+.slot{text-align:center}
+.slot-label{font-size:10px;letter-spacing:.2em;color:#9a94b0;margin-bottom:6px}
+.slot-card{
+  width:66px;height:100px;border-radius:6px;position:relative;perspective:800px;
+}
+.slot-card .inner{
+  position:absolute;inset:0;transform-style:preserve-3d;transition:transform 1s cubic-bezier(.4,.2,.2,1);
+  border-radius:6px;
+}
+.slot-card.filled .inner{border:1px solid rgba(212,184,133,.5)}
+.slot-card:not(.filled) .inner{border:1.5px dashed rgba(154,148,176,.4)}
+.slot-card.flipped .inner{transform:rotateY(180deg)}
+.slot-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px}
+.slot-face.back{background:linear-gradient(150deg,#3a2a66,#1c1440 60%,#241858);}
+.slot-face.back .mark{font-size:20px;color:rgba(212,184,133,.55);font-family:'Cormorant Garamond',serif;font-style:italic}
+.slot-face.front{background:#12163a;transform:rotateY(180deg);border:1px solid rgba(212,184,133,.6);text-align:center;padding:6px}
+.slot-face.front .kanji{font-size:20px;color:#d4b885;font-family:'Cormorant Garamond',serif}
+.slot-face.front .cname{font-size:10.5px;color:#eae6d4;line-height:1.4;margin-top:3px}
+.slot-face.front .orient{font-size:8.5px;color:#9a94b0;letter-spacing:.15em;margin-top:3px}
+
+/* table + fan */
+#table-wrap{perspective:900px;margin-top:6px}
+#table{
+  width:300px;height:180px;border-radius:50%;position:relative;
+  background:radial-gradient(ellipse at center,#2a2040 0%,#160f2c 70%);
+  border:2px solid rgba(212,184,133,.55);
+  box-shadow:0 0 40px rgba(120,80,180,.25), inset 0 0 30px rgba(0,0,0,.5);
+  transform:rotateX(48deg);
+  transform-style:preserve-3d;
+}
+#fan{position:absolute;left:50%;top:50%;width:0;height:0}
+.fan-card{
+  position:absolute;left:0;top:0;width:46px;height:70px;margin:-35px 0 0 -23px;
+  border-radius:5px;cursor:pointer;
+  background:linear-gradient(150deg,#4a3580,#1c1440 60%,#2a1a5c);
+  border:1px solid rgba(212,184,133,.45);
+  box-shadow:0 3px 10px rgba(0,0,0,.4);
+  transition:box-shadow .3s ease, filter .3s ease;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;animation:fanIn .6s ease forwards;
+}
+.fan-card .mark{font-size:14px;color:rgba(212,184,133,.5);font-family:'Cormorant Garamond',serif;font-style:italic}
+.fan-card.used{pointer-events:none}
+.fan-card.picked{filter:drop-shadow(0 0 14px rgba(190,140,255,.9));z-index:50}
+.fan-card.flying{position:fixed;transition:transform .6s cubic-bezier(.3,.6,.3,1),opacity .5s ease .3s;z-index:200}
+.fan-card.flying.gone{opacity:0}
+@keyframes fanIn{to{opacity:1}}
+
+#begin-overlay{
+  position:fixed;inset:0;z-index:30;background:rgba(6,7,20,.55);
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;
+  cursor:pointer;transition:opacity .6s ease;
+}
+#begin-overlay .tap-txt{font-size:13px;letter-spacing:.2em;color:#eae6d4;animation:pulseTxt 2.2s ease-in-out infinite}
+@keyframes pulseTxt{0%,100%{opacity:.5}50%{opacity:1}}
+#begin-overlay[hidden]{display:none}
+
+/* reading sheet */
+#sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:20;
+  background:#0e1530;border-top:1px solid rgba(212,184,133,.35);
+  border-radius:18px 18px 0 0;
+  transform:translateY(100%);transition:transform .55s cubic-bezier(.3,.7,.3,1);
+  max-height:82vh;display:flex;flex-direction:column;
+  box-shadow:0 -10px 40px rgba(0,0,0,.5);
+}
+#sheet.open{transform:translateY(0)}
+#sheet.collapsed{transform:translateY(calc(100% - 54px))}
+.sheet-handle{padding:12px 0 8px;text-align:center;cursor:pointer;flex-shrink:0}
+.sheet-handle .bar{width:36px;height:4px;background:rgba(212,184,133,.5);border-radius:2px;margin:0 auto 6px}
+.sheet-handle .htxt{font-size:11px;letter-spacing:.2em;color:#9a94b0}
+#sheet-body{overflow-y:auto;padding:4px 22px 26px;flex:1}
+.sheet-title{text-align:center;margin-bottom:18px}
+.sheet-title .eyebrow{display:block;margin-bottom:8px}
+.sheet-title h2{font-size:18px;font-weight:500;color:#eae6d4;letter-spacing:.14em}
+.card-block{border-top:1px solid rgba(212,184,133,.2);padding:20px 0}
+.card-block:first-of-type{border-top:none}
+.card-position{font-family:'Cormorant Garamond',serif;font-style:italic;color:#c9a96e;font-size:12px;letter-spacing:.2em}
+.card-position-jp{font-size:12px;color:#b9b4a4;letter-spacing:.18em;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid rgba(212,184,133,.15)}
+.card-name{font-size:16px;font-weight:500;color:#eae6d4;margin-bottom:2px}
+.card-tag{font-size:10.5px;color:#9a94b0;letter-spacing:.1em;margin-bottom:2px}
+.card-orientation{font-size:10.5px;color:#8a8576;letter-spacing:.18em;margin-bottom:12px}
+.card-message p{font-size:13.5px;line-height:1.95;color:#c8c4b0;margin-bottom:12px;font-weight:300}
+.card-section{margin-top:16px;padding-top:14px;border-top:1px solid rgba(212,184,133,.12)}
+.section-label{font-size:11px;color:#c9a96e;letter-spacing:.18em;margin-bottom:8px;font-weight:500}
+.section-text{font-size:13.5px;line-height:1.9;color:#c8c4b0;font-weight:300}
+.affirmation-text{font-size:13.5px;color:#eae6d4;letter-spacing:.1em;line-height:1.9}
+.comp-section{margin-top:8px;padding-top:22px;border-top:1px solid rgba(212,184,133,.25)}
+.comp-title{font-family:'Cormorant Garamond',serif;font-style:italic;color:#c9a96e;font-size:13px;letter-spacing:.22em;margin-bottom:12px;text-align:center}
+.comp-text p{font-size:13.5px;line-height:1.95;color:#c8c4b0;margin-bottom:12px;font-weight:300}
+.actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:26px}
+.action-btn{background:transparent;border:1px solid #9a94b0;color:#eae6d4;font-family:inherit;font-size:11.5px;letter-spacing:.18em;padding:12px 20px;cursor:pointer;transition:all .3s ease;border-radius:2px}
+.action-btn:hover{background:#eae6d4;color:#0e1530}
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(100px);background:#eae6d4;color:#141a38;padding:12px 24px;border-radius:4px;font-size:12px;letter-spacing:.12em;opacity:0;transition:all .35s ease;z-index:100;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+@media(min-width:480px){
+  #table{width:340px;height:210px}
+}
+</style>
+</head>
+<body>
+<div id="cosmos"></div>
+
+<div id="stage">
+  <header class="top">
+    <p class="eyebrow">a virtual reading table</p>
+    <h1>三枚のカード</h1>
+    <p class="lede">大アルカナ・小アルカナ、78枚すべてから。<br>静かに、気になるカードを選んでください。</p>
+    <div id="dealer"><div class="hood"></div><div class="glow"></div><div class="cloak"></div></div>
+    <p id="progress"></p>
+  </header>
+
+  <div id="slots">
+    <div class="slot"><div class="slot-label">過去</div><div class="slot-card" data-pos="0"><div class="inner"><div class="slot-face back"><span class="mark">✦</span></div><div class="slot-face front"></div></div></div></div>
+    <div class="slot"><div class="slot-label">現在</div><div class="slot-card" data-pos="1"><div class="inner"><div class="slot-face back"><span class="mark">✦</span></div><div class="slot-face front"></div></div></div></div>
+    <div class="slot"><div class="slot-label">未来</div><div class="slot-card" data-pos="2"><div class="inner"><div class="slot-face back"><span class="mark">✦</span></div><div class="slot-face front"></div></div></div></div>
+  </div>
+
+  <div id="table-wrap">
+    <div id="table"><div id="fan"></div></div>
+  </div>
+</div>
+
+<div id="begin-overlay"><p class="eyebrow">tap the table</p><p class="tap-txt">テーブルに触れて、はじめる</p></div>
+
+<div id="sheet">
+  <div class="sheet-handle" id="sheet-handle"><div class="bar"></div><div class="htxt">たたむ / ひらく</div></div>
+  <div id="sheet-body"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===================== data: major arcana (22, verbatim from tarot-3card-omasu.html) ===================== */
+const MAJOR_CARDS = [
+{name:"愚者",num:0,upright:{message:"愚者は、タロット78枚の最初に置かれる一枚です。何も持っていない、まだ何も決まっていない、その軽やかさが特徴のカード。\n\n何かを始めるとき、人はつい「準備が整ってから」と先延ばしにしてしまいます。でも本当に必要な準備は、案外少ないです。完璧を待っているうちに、始めたかった気持ちの方が消えていきます。\n\n怖さを感じているとしたら、それは間違いではないです。新しいことの前で怖いのは当たり前。怖さがあるからこそ、その先に行く価値がある、ということでもあります。",structure:"自由は、何も持っていない状態のことではないです。何を持っていくか、自分で選べることが、自由です。今日のあなたは、その選ぶ自由を持っています。",advice:"完璧な計画より、不完全でも動き出すことの方が、ずっと多くを教えてくれます。今日は、ほんの小さな一歩だけ、踏み出してみてください。",affirmation:["わたしは","自由な心で","新しい一歩を踏み出します"]},reversed:{message:"愚者の逆位置は、まだ動き出さない方がいい時を教えてくれます。気持ちは前へ向かっているのに、足元の準備がまだ整っていない、そんな状態です。\n\n焦って動くと、本来なら見えていたはずの小さな大事なものを、見落としてしまいます。早く始めたい気持ちは、悪いものではない。ただ、その勢いに自分が振り回されているのなら、一度立ち止まる価値があります。",structure:"動かないことは、止まることとは違います。今は、次の一歩を見極めるための、大事な時間です。",advice:"今日は「決めない」をひとつ選んでみてください。決めないでいい場所を残すことで、本当に大事な決断に余裕ができます。",affirmation:["わたしは","焦らずに","自分のペースを大切にします"]}},
+{name:"魔術師",num:1,upright:{message:"魔術師は、必要なものはもう揃っている、と教えてくれるカードです。経験も、知識も、人とのつながりも、いまのあなたの手の中にあります。\n\nあとは「やる」と決めるだけ。完璧に揃えてから動こうとすると、いつまでも始まりません。揃っている、というのは、足りないものがゼロという意味ではないです。十分だ、と認めていい、という意味です。\n\n今日は、自分が持っているものに目を向けてみてください。",structure:"「足りない」という感覚は、いつでも作れます。でも「ちょうどいい」と決められるのも、あなただけです。",advice:"今日は、何かをひとつ「やる」と口に出してみてください。声に出すと、決意は少しだけ強くなります。",affirmation:["わたしは","持っているものを信じて","今日の一歩を踏み出します"]},reversed:{message:"魔術師の逆位置は、道具を集めすぎている時のサインです。情報を増やすこと、スキルを足すこと、本を読むこと——準備の段階で疲れていないでしょうか。\n\n本当に必要なのは、新しい道具ではなく、いま持っているものを使い始める勇気かもしれません。完璧に揃った瞬間は、たぶん来ません。",structure:"揃えることに時間をかけている間に、肝心の「やる時間」が消えていきます。",advice:"今日は、ひとつだけ「使う」を決めてください。新しく覚えるのではなく、すでに持っているものを使い切る方向で。",affirmation:["わたしは","いまあるもので","始めることができます"]}},
+{name:"女教皇",num:2,upright:{message:"女教皇は、外の答えではなく、あなたの中の静けさに耳を澄ますカードです。誰かに聞きたい、答えを教えてほしい、そんな気持ちが強くなっていませんか。\n\n本当の答えは、たぶんもう、あなたの中にあります。ただ、今は雑音が多くて、その小さな声が聞こえにくくなっているだけです。\n\n今日は、少しだけ一人になる時間を取ってみてください。",structure:"直感は、根拠のないひらめきではないです。あなたが今まで積み重ねてきた経験が、瞬時に答えを出している状態のことです。",advice:"今日、何かを決めるとき、最初に浮かんだ答えをメモしてみてください。あとから「やっぱりあれが正解だった」と気づくことが、多いはずです。",affirmation:["わたしは","自分の中の声を","信頼します"]},reversed:{message:"女教皇の逆位置は、直感を疑いすぎている時のサインです。「これでいいのかな」「もっと確かな根拠が欲しい」と、自分の内側の声を打ち消していませんか。\n\n人に聞いて、本を読んで、調べて——それでも、最後にあなたを動かすのは、最初に浮かんだ感覚です。",structure:"確信が持てないのは、間違っているからではないです。新しい一歩の前は、誰でも揺れます。",advice:"今日は、一度だけ「直感のままに」決めてみてください。小さなことから試すと、自分の直感への信頼が育ちます。",affirmation:["わたしは","最初に浮かんだ","答えを信じます"]}},
+{name:"女帝",num:3,upright:{message:"女帝は、自分を満たすことを思い出させてくれるカードです。誰かのために、家族のために、仕事のために——後回しにしてきた「自分の好き」は、何でしたか。\n\n与え続けることは尊いことですが、自分の器が空になってしまうと、与え続けることもできなくなります。\n\n今日は、小さくていいので、自分の「好き」を選んでみてください。",structure:"自分を満たすことは、わがままではないです。むしろ、長く誰かを支えるために、必要な行為です。",advice:"今日のおやつ、今日の服、今日の音楽——どれかひとつ、迷わず「好き」を選んでください。",affirmation:["わたしは","自分を満たすことを","自分に許します"]},reversed:{message:"女帝の逆位置は、与えすぎて自分が枯れているサインです。「私が我慢すればいい」「私が頑張ればなんとかなる」と、自分を後回しにし続けてきませんでしたか。\n\n受け取ることも、優しさのうちです。相手の親切を受け取ることは、相手にも喜びを与えることになります。",structure:"与えるばかりの関係は、いつか倒れます。バランスを取り戻すのは、わがままではなく、長く続けるための知恵です。",advice:"今日、誰かに何かを頼ってみてください。小さなことで構いません。受け取る練習をしてみてください。",affirmation:["わたしは","受け取ることを","自分に許します"]}},
+{name:"皇帝",num:4,upright:{message:"皇帝は、土台を整える時です、と告げるカードです。なんとなく流されてきた日々の中で、自分の軸が少しぼんやりしていませんか。\n\n何を大事にしたいのか、どこに向かいたいのか——一度立ち止まって、自分の中の「これは譲れない」を確かめてみてください。土台が固まれば、迷いは確実に減ります。",structure:"軸を持つことは、頑固になることとは違います。何を大事にするかを、自分で決められる、ということです。",advice:"今日は、自分のルールをひとつだけ言葉にしてみてください。守れているか、守れていないかは、後で考えてOKです。",affirmation:["わたしは","自分の軸を","信頼して進みます"]},reversed:{message:"皇帝の逆位置は、ルールに縛られすぎているサインです。「こうあるべき」「こうしなければ」が増えすぎて、自分の本音が見えにくくなっていませんか。\n\nルールは、守るためにあるのではなく、自分を楽にするためにあるものです。",structure:"厳しさは、いつか自分にも向かいます。他人に向けた厳しさは、結局あなた自身を苦しめます。",advice:"今日は、自分に課しているルールをひとつだけ、ゆるめてみてください。世界は、思ったより崩れません。",affirmation:["わたしは","ゆるめることを","自分に許します"]}},
+{name:"教皇",num:5,upright:{message:"教皇は、信頼できる人の言葉に耳を傾けるカードです。今日のあなたへのヒントは、自分一人の頭の中ではなく、誰かとの会話の中にあります。\n\n普段なら聞き流すような言葉に、ふと立ち止まらされる瞬間があったら、それがサインです。",structure:"学ぶことは、自分を縮めることではないです。誰かの経験を借りて、近道をすることでもあります。",advice:"今日、誰かと話したことを、一行だけメモしてみてください。後で読み返すと、答えが見えていることがあります。",affirmation:["わたしは","誰かの言葉から","学ぶことを許します"]},reversed:{message:"教皇の逆位置は、「こうあるべき」が重くなっているサインです。世間の正解、誰かの期待、業界の常識——他人の物差しに、自分を合わせすぎていませんか。\n\n自分なりのやり方を選び直していい時です。誰のためでもなく、自分のために。",structure:"正解は一つではないです。あなたに合うやり方は、あなただけの試行錯誤の中にしかありません。",advice:"今日は、「自分はこうしたい」を一つ、口に出してみてください。誰にも見せなくて構いません。",affirmation:["わたしは","自分のやり方を","選び直していい"]}},
+{name:"恋人",num:6,upright:{message:"恋人は、心が動く方を選んでいい、と背中を押すカードです。理屈で「こうした方が得」とわかっていても、心が動くのは別の方——そんな時、迷う必要はないです。\n\n理屈は、後からいくらでも作れます。でも、心が動いた瞬間の感覚は、後から作れません。",structure:"心が動くことを「気の迷い」と片付けすぎてきませんでしたか。それは、あなたの一番正直な部分です。",advice:"今日、心が動いた瞬間があったら、それを一行だけメモしてください。明日のあなたへの大切な手がかりになります。",affirmation:["わたしは","心が動く方向を","信じて選びます"]},reversed:{message:"恋人の逆位置は、両方を欲しがる気持ちに揺れているサインです。どちらかを選ぶと、もう片方を失う——その怖さで、決められなくなっていませんか。\n\n「どっちも欲しい」という気持ちにも、まずOKを出してあげてください。本当の選択は、欲張る自分を認めたあとに、見えてきます。",structure:"揺れていることは、悪いことではないです。揺れている時間が、答えを育てている時もあります。",advice:"今日は、選ばなくていいです。ただ、両方を欲しがっている自分を、責めないでいてください。",affirmation:["わたしは","迷う自分を","責めません"]}},
+{name:"戦車",num:7,upright:{message:"戦車は、進むと決めたら、横道は気にしなくていい、と告げるカードです。あれもこれもと気を散らさずに、まっすぐ、自分が決めた方向へ進む時です。\n\nスピードを上げる必要はありません。早さよりも、方向の確かさが、いまのあなたの力になります。",structure:"まっすぐ進むということは、横道を遮断することです。何を見ないと決めるか、で進む速さは変わります。",advice:"今日は、本当に大事な一つだけに集中してみてください。それ以外は、明日の自分に渡してOK。",affirmation:["わたしは","まっすぐな道を","選び進みます"]},reversed:{message:"戦車の逆位置は、コントロールしようとしすぎて空回りしているサインです。全部を自分の手で握りしめようとすると、かえって何も動かなくなります。\n\n手綱を一度ゆるめてみてください。流れに任せていい部分が、必ずあります。",structure:"コントロールできる範囲を、自分で決めていいです。全部を背負わなくていい。",advice:"今日は、誰かに任せられることを、一つ手放してみてください。「自分でやらないと不安」を、今日だけ封印して。",affirmation:["わたしは","ゆるめることを","進む力に変えます"]}},
+{name:"力",num:8,upright:{message:"力は、押し通すことだけが強さじゃない、と教えてくれるカードです。本当の強さは、待てること、見守れること、感情に飲み込まれずに踏ん張れること、そういう静かな力です。\n\nあなたの優しさは、弱さではないです。それは、確かな力です。",structure:"強さは、外に向かって出すものとは限らないです。自分の中に静かに保つ強さも、同じくらい大切です。",advice:"今日、何かに反応したくなったら、まず一呼吸おいてみてください。反応しない強さも、選べる強さです。",affirmation:["わたしは","やさしさを力に","変える人です"]},reversed:{message:"力の逆位置は、感情を抑え込みすぎているサインです。「怒っちゃダメ」「悲しんじゃダメ」「大人だから」と、湧き上がる気持ちに蓋をしていませんか。\n\n荒れた気持ちにも、ちゃんと居場所をあげてください。感じ切ることで、その感情は通り過ぎていきます。",structure:"感情を消すことと、感情を扱うことは違います。消そうとするほど、感情は強く戻ってきます。",advice:"今日、湧いてきた気持ちを、一行だけ書き出してみてください。誰にも見せなくていいです。",affirmation:["わたしは","自分の感情に","場所をあげます"]}},
+{name:"隠者",num:9,upright:{message:"隠者は、一人になる時間が必要だと告げるカードです。賑やかな場所から少し距離を置いて、自分一人で考える時間を作っていいです。\n\n誰にも言わない静けさは、贅沢ではなく、必要なものです。一人になることで、見えてくる答えが必ずあります。",structure:"孤独と孤立は違います。孤独は、自分で選ぶ静けさです。",advice:"今日は、誰にも連絡を返さない時間を、30分でいいので作ってみてください。スマホを置く、それだけで十分です。",affirmation:["わたしは","一人になる時間を","自分に与えます"]},reversed:{message:"隠者の逆位置は、引きこもりが孤立に変わっているサインです。一人の時間が、自分を癒す時間ではなく、自分を追い込む時間になっていませんか。\n\n一人だけ、信頼できる人に声をかけてみてください。全部を話さなくていい、ただ「元気？」だけで十分です。",structure:"一人で抱える強さも大事ですが、つながりを保つ強さも、同じくらい必要です。",advice:"今日、誰か一人にだけ、短いメッセージを送ってみてください。返事は来なくても構いません。",affirmation:["わたしは","つながることを","自分に許します"]}},
+{name:"運命の輪",num:10,upright:{message:"運命の輪は、流れが切り替わるサインです。今までと同じやり方ではうまくいかない、新しい風が吹いてきている——そんな感覚はありませんか。\n\nコントロールしようとせず、波に乗ってみてください。変化は、いつでも怖いですが、いつでも次の場所への扉でもあります。",structure:"変化は、選んで起こすものだけではないです。やってきた変化に、どう乗るかも、あなたの選択です。",advice:"今日は、いつもと違うルートで歩いてみる、違う飲み物を試す、そんな小さな変化を一つ入れてみてください。",affirmation:["わたしは","流れる風に","身を任せます"]},reversed:{message:"運命の輪の逆位置は、同じところを回っているように感じる時です。同じパターンの悩み、同じ失敗、同じ後悔——なぜ繰り返してしまうのか、と疲れていませんか。\n\nいったん「降りる」勇気を持っていい時です。続けてきたことを、続けないと決めるのも、勇気のうちです。",structure:"同じところを回っているのは、あなたが悪いからではなく、降りるタイミングを待っているからかもしれません。",advice:"今日は、当たり前にやっていることを、一つだけ「やらない」と決めてみてください。",affirmation:["わたしは","降りる勇気を","持っています"]}},
+{name:"正義",num:11,upright:{message:"正義は、公平にものを見るあなたが、答えに近いと教えるカードです。感情で動きそうになる時、一度立ち止まって、事実だけを並べてみてください。\n\n冷静に見ることは、冷たくなることとは違います。あなたが大事にしているものを、ちゃんと守るための見方です。",structure:"公平さは、誰かのためではなく、自分のためにあります。自分の選択に納得するために、事実が必要です。",advice:"今日、判断に迷うことがあったら、紙に「事実」と「気持ち」を分けて書いてみてください。",affirmation:["わたしは","事実と気持ちを","分けて見られます"]},reversed:{message:"正義の逆位置は、ジャッジしすぎているサインです。自分にも、他人にも、白黒つけたがる癖が出ていませんか。\n\nグレーを許してあげてください。世界の多くは、グレーで成り立っています。",structure:"正しさは、いつも一つではないです。誰かにとっての正解が、自分にとっても正解とは限らない。",advice:"今日は、判断を保留することを、一つだけ自分に許してみてください。「まだ決めない」も、立派な答えです。",affirmation:["わたしは","グレーを許す","やさしさを持ちます"]}},
+{name:"吊された男",num:12,upright:{message:"吊された男は、いま動かないことが最大の答え、と告げるカードです。前に進めない、停滞している——そんな感覚があっても、それは間違いではないです。\n\n視点が変わるまで、しばらく逆さまで眺めてみてください。動かない時間にしか、見えない景色があります。",structure:"停滞は、何もしていないことではないです。あなたの中で、何かが熟している時間です。",advice:"今日は、焦って動かなくて大丈夫です。代わりに、いつもなら気にしない景色を、ゆっくり眺めてみてください。",affirmation:["わたしは","止まる時間にも","意味があると信じます"]},reversed:{message:"吊された男の逆位置は、我慢が長引きすぎているサインです。「あと少し」「もう少しだけ」と踏ん張ってきたものを、そろそろ手放していい時かもしれません。\n\n手放すことは、負けではないです。次のあなたへ場所を空ける、ということです。",structure:"我慢の先に、必ず報われる保証はありません。手放した先に開く扉もあります。",advice:"今日、いま続けていることの中で「もう疲れた」と感じるものを、一つだけ思い浮かべてみてください。",affirmation:["わたしは","手放す勇気を","持ち始めています"]}},
+{name:"死神",num:13,upright:{message:"死神は、終わりは次の始まりとセットだ、と教えてくれるカードです。何かが終わる気配を、最近感じていませんか。それは、悲しいことだけではないです。\n\n手放したものの分だけ、新しいものが入ってくるための場所が空きます。終わりを恐れる気持ちは自然ですが、終わらせることは、未来へのギフトでもあります。",structure:"終わりがないものは、始まりもないということです。流れの中にあるからこそ、新しいものが訪れます。",advice:"今日、もう持っていなくていいものを、一つだけ手放してみてください。物でも、感情でも、習慣でも、何でも。",affirmation:["わたしは","終わりを","始まりへ変えます"]},reversed:{message:"死神の逆位置は、終わらせる怖さで、ずるずる続けているサインです。もうこれ以上続けても意味がない、と心の奥でわかっているものがあるかもしれません。\n\n区切ることも、優しさです。自分にも、相手にも、未来にも。",structure:"続けることが美徳とは限らないです。終わらせる決断にも、同じくらいの強さが要ります。",advice:"今日は、「これは終わらせていい」と心で唱えてみてください。実際に終わらせる前に、まず認めることから。",affirmation:["わたしは","区切ることを","自分に許します"]}},
+{name:"節制",num:14,upright:{message:"節制は、急がず、混ぜず、ちょうどいい配分を探すカードです。極端に振れたい気分の時こそ、真ん中を意識する価値があります。\n\nバランスは、一発で取れるものではないです。毎日の小さな調整の積み重ねで、少しずつ整っていくものです。",structure:"バランスを取ることは、面白くないことではないです。長く続けるための、いちばん大事な技術です。",advice:"今日は、何か一つを「ほどほどに」やってみてください。完璧か無かではなく、ちょうどいい量で。",affirmation:["わたしは","ちょうどよさを","見つけられます"]},reversed:{message:"節制の逆位置は、極端に振れているサインです。やるか/やらないか、全か/無か、完璧か/破綻か——白黒思考に飲み込まれていませんか。\n\n真ん中を取り戻すのに、罪悪感はいりません。中途半端で、いいです。",structure:"振れ幅が大きいときは、振り子の真ん中を意識するだけで、楽になります。",advice:"今日は、「全部やる」も「全部やめる」もせずに、半分だけやってみてください。",affirmation:["わたしは","中庸を","選んでいい"]}},
+{name:"悪魔",num:15,upright:{message:"悪魔は、やめたいのにやめられないことを、客観的に見るタイミング、と告げるカードです。何かに縛られている感覚はありませんか。\n\n鎖は、案外ゆるいかもしれません。自分で自分を縛っているケースも多いです。",structure:"縛られていると感じる時、本当に縛っているのは外側ではなく、自分の中にある「こうあるべき」かもしれません。",advice:"今日は、「これがないと不安」と感じているものを、一つだけ書き出してみてください。書くだけで、ゆるみ始めます。",affirmation:["わたしは","縛られていた自分に","気づきはじめています"]},reversed:{message:"悪魔の逆位置は、縛られていたものから、ふっと解ける兆しがあるカードです。「やめられない」と思っていたものから、少しだけ距離を取れる時期に入っています。\n\n怖がらず、緩める方向へ進んでみてください。",structure:"解放は、一気に来るものではないです。少しずつ、ゆるめていくものです。",advice:"今日は、「これは手放してもいいかも」と感じたものを、一つだけ意識してみてください。手放さなくても、意識するだけでOK。",affirmation:["わたしは","ゆるめる方向へ","進みはじめています"]}},
+{name:"塔",num:16,upright:{message:"塔は、急な変化に見えても、土台はもう揺らいでいたと教えてくれるカードです。突然の出来事に動揺しているかもしれませんが、本当はずっと前から、何かが軋んでいませんでしたか。\n\n崩れた先で、本当の柱が見えてきます。崩れたことは、終わりではなく、整理の始まりです。",structure:"揺れているものは、いつか倒れます。倒れた後に何が残るかで、あなたの本当の土台が見えます。",advice:"今日は、片付けや整理を一つだけしてみてください。物理的なことでも、気持ちのことでも、構いません。",affirmation:["わたしは","崩れた先に","新しい柱を見つけます"]},reversed:{message:"塔の逆位置は、衝撃をまだ受け止めきれていないサインです。何かが終わった、壊れた感覚があっても、まだ整理がついていない、そんな状態かもしれません。\n\n整理は、ゆっくりで大丈夫です。急いで「立ち直る」必要は、ないです。",structure:"衝撃の後は、誰でも時間がかかります。早く元気にならなきゃ、と自分を急かさないでください。",advice:"今日は、何もしない時間を、ちゃんと自分に許してみてください。回復は、休む時間が作ります。",affirmation:["わたしは","回復のための時間を","自分に許します"]}},
+{name:"星",num:17,upright:{message:"星は、静かな希望が、あなたの胸の奥にまだ残っているカードです。日常の中で、すり減って、忘れたフリをしてきた小さな願いはありませんか。\n\nそれを、消さないでください。叶うかどうかより、持ち続けることに価値があります。",structure:"希望は、大きな夢である必要はないです。「こんな日々が続いたらいいな」も、十分立派な希望です。",advice:"今日は、自分の小さな願いを、一行だけ書いてみてください。誰にも見せなくていいです。",affirmation:["わたしは","胸の奥の希望を","大切にしています"]},reversed:{message:"星の逆位置は、期待しすぎて、現実を見るのが怖くなっているサインです。理想を高く持つこと自体は悪くないですが、それで自分を苦しめていませんか。\n\n小さな一歩で、いいです。今日できる一つを、ちゃんと積み重ねていくことが、いちばん星に近づく道です。",structure:"理想と現実のギャップで苦しい時は、ギャップを埋めようとせず、ギャップを認めるところから始めます。",advice:"今日できる、いちばん小さな一歩を、一つだけ書き出してみてください。実行できなくても、構いません。",affirmation:["わたしは","小さな一歩を","重ねていきます"]}},
+{name:"月",num:18,upright:{message:"月は、答えが見えにくい時期を、無理に明るくしなくていい、と告げるカードです。霧の中にいるような、ぼんやりした不安があるかもしれません。\n\n不安の輪郭を、ぼんやり眺めるくらいでちょうどいいです。はっきり言葉にしようとすると、かえって輪郭が崩れます。",structure:"答えが出ない時期にも、ちゃんと意味があります。それは、答えを急いではいけない時期、というメッセージです。",advice:"今日は、決断を一つ、明日に持ち越してみてください。今日決めないことも、立派な選択です。",affirmation:["わたしは","見えない時期にも","自分を信じます"]},reversed:{message:"月の逆位置は、霧が晴れる気配があるカードです。長く続いていた不安や混乱が、少しずつ輪郭を取り戻しはじめています。\n\n一人で抱えていた不安を、誰かに話してみてもいい頃です。話すことで、自分の中でも形が見えてきます。",structure:"不安は、誰かに話すと半分になります。話す相手は、解決してくれる人でなくても構いません。",advice:"今日、誰かに「最近こういうことで悩んでて」と、一行だけ送ってみてください。",affirmation:["わたしは","霧の向こうへ","歩いていけます"]}},
+{name:"太陽",num:19,upright:{message:"太陽は、隠してきた魅力を出していい、と背中を押すカードです。「私なんて」と引っ込めてきた部分を、今日は少しだけ見せてみてください。\n\nあなたが楽しむことが、まわりにも光を渡します。自分が輝くことは、誰かを暗くすることではないです。",structure:"喜びは、出し惜しみするものではないです。喜んでいる人は、その存在だけで、周りに何かを渡しています。",advice:"今日、自分が楽しいと感じたら、それを誰かに伝えてみてください。SNSの投稿でも、誰かへのメッセージでも。",affirmation:["わたしは","自分の光を","隠さなくていい"]},reversed:{message:"太陽の逆位置は、笑顔の下で疲れているサインです。「大丈夫」「楽しい」「平気」と、自分を押し上げて頑張ってきませんでしたか。\n\n明るさにも、休ませる時間が必要です。",structure:"いつも笑顔でいることは、目標ではないです。疲れた顔の自分にも、ちゃんと居場所をあげてください。",advice:"今日は、無理に笑わなくていいです。一人の時間に、ちゃんと「疲れた」と口に出してみてください。",affirmation:["わたしは","疲れた自分にも","やさしくします"]}},
+{name:"審判",num:20,upright:{message:"審判は、過去のあなたを呼び戻す、やり直しのサインです。一度諦めたこと、終わったと思っていたことが、別の角度から再開する気配があります。\n\n同じ場所には戻りません。もう一度、けれど別の角度から、新しい形で。",structure:"やり直しは、過去の失敗ではないです。あの時の経験を、今のあなたが使えるようになった、ということです。",advice:"今日は、「これはもう終わった」と決めつけているものを、一つだけ思い出してみてください。本当に終わっているか、確かめる価値があります。",affirmation:["わたしは","もう一度、別の形で","始められます"]},reversed:{message:"審判の逆位置は、自分を責める癖が出ているサインです。「あの時こうしていれば」「私が悪かった」と、過去を裁き続けていませんか。\n\n判決を下すのは、あなた自身ではないです。過去の自分にも、「あの時はあれが精一杯だった」と、認めてあげてください。",structure:"反省と自責は、違います。反省は次に進む力に、自責は前に進むのを止める力になります。",advice:"今日は、過去の自分に、一行だけ「よくやった」と書いてみてください。",affirmation:["わたしは","過去の自分を","責めません"]}},
+{name:"世界",num:21,upright:{message:"世界は、タロット78枚の中でも特別な一枚です。長い旅の末にたどり着く、完成のカード。このカードが出るとき、ひとつの大きな流れが終わりに近づいています。\n\nここまでの道のりを、少しだけ振り返ってみてください。うまくいかなかった時期も、遠回りした時間も、全部、いまのあなたを作っています。あの遠回りに見えた時間にも、ちゃんと意味があったんです。\n\nまず今日までの自分を、自分が一番先に認めてあげてください。",structure:"終わりへの不安と、次への期待は、同時にやってきます。両方を感じているのは、それだけ真剣に生きてきた証です。",advice:"今日、ひとつだけ自分を褒めてあげてください。「これくらい当たり前」と流さずに、当たり前にこなしてきたことを、ちゃんと認めて。",affirmation:["わたしは","すべてを統合して","新しいステージへと進みます"]},reversed:{message:"世界の逆位置は、あと一歩、まだやり残しがあるサインです。完成間近で、もう終わったような気がしていても、最後の仕上げを丁寧にしてください。\n\n焦らず、丁寧に、最後の一歩を踏みしめて。",structure:"「もういいや」が出てきたときが、いちばん最後の踏ん張りどころです。ここまで来たから、ちゃんと締めくくる価値があります。",advice:"今日は、終わりかけていることを、もう一度見直してみてください。あと一手間、何かできることがあるかもしれません。",affirmation:["わたしは","最後まで","丁寧に終わらせます"]}}
+].map(c=>({...c,arcana:'major',structureLabel:'思考整理'}));
+
+/* ===================== data: minor arcana (56, generated: suit x number/court x orientation) ===================== */
+const SUITS = {
+  wands:{name:"ワンド",kanji:"杖",element:"火",domainLong:"情熱・行動・キャリアの領域",coreVerb:"動き出す力",brightWord:"意欲"},
+  cups:{name:"カップ",kanji:"杯",element:"水",domainLong:"感情・関係・心の内側の領域",coreVerb:"感じ、つながる力",brightWord:"共感"},
+  swords:{name:"ソード",kanji:"剣",element:"風",domainLong:"思考・言葉・葛藤の領域",coreVerb:"見極め、言葉にする力",brightWord:"明晰さ"},
+  pentacles:{name:"ペンタクル",kanji:"金",element:"地",domainLong:"現実・お金・身体の領域",coreVerb:"積み上げ、形にする力",brightWord:"着実さ"}
+};
+
+const STAGE_TEXT = {
+1:{upright:el=>({message:`${el.name}の1は、${el.domainLong}に、新しい種がまかれた瞬間を表します。まだ形になっていない、ただの可能性の段階です。\n\n何かを始めたい、そんな小さな衝動を感じていませんか。今はその衝動を、大きな計画にする必要はないです。ただ、芽を出したことを認めてあげるだけで十分です。`,structure:`${el.name}(${el.element}) × 数の1(はじまり) → 正位置は、${el.coreVerb}が、素直に芽吹いている状態を示します。`,advice:`今日は、思いついたことを、行動にする前に、まず言葉にしてみてください。`,affirmation:["わたしは",`新しい${el.brightWord}の`,"芽を大切にします"]}),
+   reversed:el=>({message:`${el.name}の1の逆位置は、種をまいたものの、なかなか芽が出ない、もしくは芽が出る前に不安になっている状態を表します。\n\n始めたい気持ちはあるのに、一歩が重い——そんな時かもしれません。焦らなくて大丈夫です。土の中で、根はゆっくり育っています。`,structure:`${el.name}(${el.element}) × 数の1(はじまり) × 逆位置 → ${el.coreVerb}が、外に出る前で足踏みしている状態を示します。`,advice:`今日は、始められない自分を責めずに、その理由を一つだけ書き出してみてください。`,affirmation:["わたしは","焦らず","種が育つ時間を信じます"]})},
+2:{upright:el=>({message:`${el.name}の2は、二つの選択肢の間で、天秤にかけている段階を表します。どちらも捨てがたい、そんな${el.domainLong}の岐路に立っているのかもしれません。\n\nすぐに答えを出さなくていいです。両方を眺めている時間そのものが、あなたにとって必要な準備になっています。`,structure:`${el.name}(${el.element}) × 数の2(選択) → 正位置は、${el.coreVerb}を、どちらに向けるか吟味している状態を示します。`,advice:`今日は、二つの選択肢を、紙に並べて書き出してみてください。決めなくていいです、並べるだけで十分です。`,affirmation:["わたしは","迷う時間にも","意味があると信じます"]}),
+   reversed:el=>({message:`${el.name}の2の逆位置は、選べないまま、時間だけが過ぎている状態を表します。決められない自分を、責めていませんか。\n\n決断を先延ばしにしているのではなく、まだ材料が揃っていないだけかもしれません。`,structure:`${el.name}(${el.element}) × 数の2(選択) × 逆位置 → 判断の材料が、まだ十分に揃っていない状態を示します。`,advice:`今日は、決めるために足りない情報を、一つだけ探してみてください。`,affirmation:["わたしは","決められない自分を","責めません"]})},
+3:{upright:el=>({message:`${el.name}の3は、種から芽が出て、最初の形が見え始めた段階を表します。一人で抱えていたものが、誰かと関わることで、少しずつ形になっていきます。\n\n${el.domainLong}において、協力や共有が、次の広がりを生みます。`,structure:`${el.name}(${el.element}) × 数の3(拡がり・協力) → 正位置は、${el.coreVerb}が、他者との関わりの中で形になり始めている状態を示します。`,advice:`今日は、一人で抱えていたことを、一つだけ誰かに共有してみてください。`,affirmation:["わたしは","一人で","抱え込まなくていい"]}),
+   reversed:el=>({message:`${el.name}の3の逆位置は、協力のはずが、足並みが揃わずにいる状態を表します。期待していた広がりが、思ったように進まないもどかしさがあるかもしれません。\n\n焦らず、まず自分のペースを整えることから始めてみてください。`,structure:`${el.name}(${el.element}) × 数の3(拡がり) × 逆位置 → 他者との足並みが揃わない状態を示します。`,advice:`今日は、相手に合わせすぎず、自分のペースを一つ確認してみてください。`,affirmation:["わたしは","自分のペースを","大切にします"]})},
+4:{upright:el=>({message:`${el.name}の4は、動き続けてきたものが、一旦落ち着きを見せる段階を表します。${el.domainLong}において、基盤が整い始めているサインです。\n\n休むことは、止まることではないです。ここでの落ち着きが、次の動きを支える土台になります。`,structure:`${el.name}(${el.element}) × 数の4(安定) → 正位置は、${el.coreVerb}が、一つの安定した形に落ち着いている状態を示します。`,advice:`今日は、頑張ることより、いま整っているものを確認する日にしてみてください。`,affirmation:["わたしは","いまの安定を","味わいます"]}),
+   reversed:el=>({message:`${el.name}の4の逆位置は、安定を求めすぎて、変化を怖がっている状態を表します。居心地の良さに留まりたい気持ちと、そろそろ動きたい気持ちが、綱引きしていませんか。\n\n安定は、動かないことと同じ意味ではないです。`,structure:`${el.name}(${el.element}) × 数の4(安定) × 逆位置 → 安定に留まりすぎている状態を示します。`,advice:`今日は、いつもと同じ場所から、少しだけ外に出てみてください。`,affirmation:["わたしは","安定した場所から","一歩踏み出せます"]})},
+5:{upright:el=>({message:`${el.name}の5は、それまでの流れに、摩擦や動揺が生まれる段階を表します。${el.domainLong}において、何かがうまくいかない感覚があるかもしれません。\n\nこの摩擦は、悪いことだけを意味しません。今までのやり方を見直す、きっかけになっています。`,structure:`${el.name}(${el.element}) × 数の5(摩擦・転換) → 正位置は、${el.coreVerb}に、見直しのきっかけとなる摩擦が起きている状態を示します。`,advice:`今日は、うまくいかなかったことを、責めずに、一つだけ書き出してみてください。`,affirmation:["わたしは","摩擦の中にも","学びを見つけます"]}),
+   reversed:el=>({message:`${el.name}の5の逆位置は、摩擦が長引いて、疲れが積み重なっている状態を表します。同じ問題に、何度もぶつかっていませんか。\n\nそろそろ、やり方そのものを変える時期かもしれません。`,structure:`${el.name}(${el.element}) × 数の5(摩擦) × 逆位置 → 同じ摩擦が繰り返されている状態を示します。`,advice:`今日は、いつもと違うやり方を、一つだけ試してみてください。`,affirmation:["わたしは","同じ道を","繰り返さなくていい"]})},
+6:{upright:el=>({message:`${el.name}の6は、摩擦の後に、調和が戻ってくる段階を表します。${el.domainLong}において、誰かとの間に、バランスが取れ始めているようです。\n\n与えることと受け取ることが、自然に釣り合っている、穏やかな時期です。`,structure:`${el.name}(${el.element}) × 数の6(調和) → 正位置は、${el.coreVerb}が、他者との間でバランスを取り戻している状態を示します。`,advice:`今日は、誰かに何かを分けてみてください。時間でも、言葉でも構いません。`,affirmation:["わたしは","分かち合うことを","大切にします"]}),
+   reversed:el=>({message:`${el.name}の6の逆位置は、バランスが片方に偏っている状態を表します。与えすぎている、もしくは受け取りすぎている——そんな心当たりはありませんか。\n\n釣り合いを取り戻すのは、いつからでも遅くありません。`,structure:`${el.name}(${el.element}) × 数の6(調和) × 逆位置 → 与える/受け取るのバランスが偏っている状態を示します。`,advice:`今日は、与えてばかりのことを一つ、受け取る側に回してみてください。`,affirmation:["わたしは","バランスを","取り戻していいです"]})},
+7:{upright:el=>({message:`${el.name}の7は、これまでのやり方を、一度立ち止まって見直す段階を表します。${el.domainLong}において、正解を急がず、自分なりの方法を探っている時期です。\n\n試行錯誤そのものが、今のあなたにとって必要なプロセスです。`,structure:`${el.name}(${el.element}) × 数の7(内省) → 正位置は、${el.coreVerb}を、自分のペースで見直している状態を示します。`,advice:`今日は、いつものやり方を一つ疑って、別の方法を試してみてください。`,affirmation:["わたしは","試行錯誤する自分を","認めます"]}),
+   reversed:el=>({message:`${el.name}の7の逆位置は、考えすぎて、動けなくなっている状態を表します。見直しが長引いて、堂々巡りになっていませんか。\n\nどこかで、考えることをいったん止める勇気も必要です。`,structure:`${el.name}(${el.element}) × 数の7(内省) × 逆位置 → 考えることが堂々巡りになっている状態を示します。`,advice:`今日は、考えるのを一度やめて、体を動かしてみてください。`,affirmation:["わたしは","考えすぎる自分を","一旦休ませます"]})},
+8:{upright:el=>({message:`${el.name}の8は、見直しを終えて、迷いなく集中できる段階を表します。${el.domainLong}において、物事が加速し始めているサインです。\n\n余計なことを考えず、目の前のことに没頭できる時期です。`,structure:`${el.name}(${el.element}) × 数の8(集中・加速) → 正位置は、${el.coreVerb}が、迷いなく加速している状態を示します。`,advice:`今日は、一つのことに、集中する時間をまとめて取ってみてください。`,affirmation:["わたしは","迷いなく","集中します"]}),
+   reversed:el=>({message:`${el.name}の8の逆位置は、加速しすぎて、余裕がなくなっている状態を表します。頑張りすぎて、息切れしていませんか。\n\nスピードを落とすことは、後退ではないです。`,structure:`${el.name}(${el.element}) × 数の8(加速) × 逆位置 → 加速しすぎて余裕を失っている状態を示します。`,advice:`今日は、意識的にペースを落として、休憩を挟んでみてください。`,affirmation:["わたしは","ペースを","落としていいです"]})},
+9:{upright:el=>({message:`${el.name}の9は、ゴールまであと少し、というところまで来た段階を表します。${el.domainLong}において、これまでの積み重ねが、確かな力になっています。\n\n一人で頑張ってきた分、孤独も感じているかもしれません。でも、その孤独は、あなたが本気で向き合ってきた証です。`,structure:`${el.name}(${el.element}) × 数の9(到達手前) → 正位置は、${el.coreVerb}が、完成の一歩手前まで積み上がっている状態を示します。`,advice:`今日は、ここまで積み重ねてきた自分を、一度きちんと認めてあげてください。`,affirmation:["わたしは","ここまでの自分を","認めます"]}),
+   reversed:el=>({message:`${el.name}の9の逆位置は、あと少しのところで、疲れ果てている状態を表します。ゴールが見えているのに、力が出ない——そんな感覚はありませんか。\n\n最後の一踏ん張りの前に、休むことも必要です。`,structure:`${el.name}(${el.element}) × 数の9(到達手前) × 逆位置 → 完成間近で力尽きかけている状態を示します。`,advice:`今日は、無理に頑張らず、休むことを自分に許してください。`,affirmation:["わたしは","休むことも","前進の一部だと知っています"]})},
+10:{upright:el=>({message:`${el.name}の10は、ひとつのサイクルが完成する段階を表します。${el.domainLong}において、始まりから積み重ねてきたものが、ひとつの形として完結しようとしています。\n\n完成は、同時に次の始まりの入り口でもあります。`,structure:`${el.name}(${el.element}) × 数の10(完成) → 正位置は、${el.coreVerb}が、ひとつの形として完結している状態を示します。`,advice:`今日は、ひとつ終えたことを、きちんと区切りとして認めてあげてください。`,affirmation:["わたしは","ひとつのサイクルを","完成させます"]}),
+   reversed:el=>({message:`${el.name}の10の逆位置は、終わったはずのことが、まだ引き延ばされている状態を表します。区切りをつけられずに、同じことを続けていませんか。\n\n終わらせることも、ひとつの決断です。`,structure:`${el.name}(${el.element}) × 数の10(完成) × 逆位置 → 区切りをつけられずにいる状態を示します。`,advice:`今日は、終わっていいことを一つ、はっきり終わらせてみてください。`,affirmation:["わたしは","区切りをつける勇気を","持ちます"]})}
+};
+
+const COURT_TEXT = {
+page:{upright:el=>({message:`${el.name}のペイジは、${el.domainLong}に対して、まだ経験は浅いけれど、素直な好奇心を持っている段階を表します。\n\n知らないことを、恥ずかしがらずに聞ける時期です。うまくいくかどうかより、まず試してみることに価値があります。`,structure:`${el.name}(${el.element}) × ペイジ(見習い・好奇心) → 正位置は、${el.coreVerb}を、初々しい姿勢で学び始めている状態を示します。`,advice:`今日は、知らないことを一つ、誰かに聞いてみてください。`,affirmation:["わたしは","初心者の自分を","恥じません"]}),
+   reversed:el=>({message:`${el.name}のペイジの逆位置は、経験不足への不安が先に立って、動けなくなっている状態を表します。\n\n「まだ早い」「もっと勉強してから」と、始める前に足踏みしていませんか。`,structure:`${el.name}(${el.element}) × ペイジ(見習い) × 逆位置 → 学び始める前の、不安と足踏みの状態を示します。`,advice:`今日は、完璧に理解していなくても、一つだけ試しにやってみてください。`,affirmation:["わたしは","分からないままでも","一歩を踏み出します"]})},
+knight:{upright:el=>({message:`${el.name}のナイトは、${el.domainLong}に向かって、まっすぐ突き進んでいる段階を表します。\n\n迷いよりも勢いが勝っている時期です。多少の粗さがあっても、動いていることそのものに価値があります。`,structure:`${el.name}(${el.element}) × ナイト(前進) → 正位置は、${el.coreVerb}が、勢いよく前に向かっている状態を示します。`,advice:`今日は、考えるより先に、体を動かしてみてください。`,affirmation:["わたしは","勢いを","味方にします"]}),
+   reversed:el=>({message:`${el.name}のナイトの逆位置は、勢いだけが先走って、周りが見えなくなっている状態を表します。\n\n急ぎすぎて、大事な確認を飛ばしていないでしょうか。`,structure:`${el.name}(${el.element}) × ナイト(前進) × 逆位置 → 勢いが、方向を見失いかけている状態を示します。`,advice:`今日は、動き出す前に、一呼吸だけ置いてみてください。`,affirmation:["わたしは","立ち止まる勇気も","持っています"]})},
+queen:{upright:el=>({message:`${el.name}のクイーンは、${el.domainLong}を、自分の内側で十分に熟成させ、受け止められるようになった段階を表します。\n\n無理に外へ出さなくても、静かに持っているだけで、まわりに伝わるものがあります。`,structure:`${el.name}(${el.element}) × クイーン(内面化・成熟) → 正位置は、${el.coreVerb}が、成熟した形で内側に根づいている状態を示します。`,advice:`今日は、誰かに教える立場で、一度話してみてください。`,affirmation:["わたしは","育ててきたものを","信頼します"]}),
+   reversed:el=>({message:`${el.name}のクイーンの逆位置は、内側に抱えすぎて、少し重たくなっている状態を表します。\n\n受け止める役割を、自分一人で背負っていませんか。`,structure:`${el.name}(${el.element}) × クイーン(内面化) × 逆位置 → 抱え込みすぎている状態を示します。`,advice:`今日は、抱えているものを、一つだけ誰かに預けてみてください。`,affirmation:["わたしは","一人で抱えなくていいと","知っています"]})},
+king:{upright:el=>({message:`${el.name}のキングは、${el.domainLong}を、自分のものとして体現し、統率できるようになった段階を表します。\n\n迷いなく決断できるのは、これまで積み重ねてきた経験があるからです。`,structure:`${el.name}(${el.element}) × キング(統率・体現) → 正位置は、${el.coreVerb}が、確かな形で完成している状態を示します。`,advice:`今日は、迷ったときこそ、これまでの経験に従って決めてみてください。`,affirmation:["わたしは","積み重ねてきた力を","信じます"]}),
+   reversed:el=>({message:`${el.name}のキングの逆位置は、力を持ちすぎて、扱い方を誤りかけている状態を表します。\n\n決断力が、周りへの配慮を置き去りにしていないでしょうか。`,structure:`${el.name}(${el.element}) × キング(統率) × 逆位置 → 力の使い方が、少し偏っている状態を示します。`,advice:`今日は、決める前に、誰か一人の意見を聞いてみてください。`,affirmation:["わたしは","力とやさしさを","両方持てます"]})}
+};
+
+const COURT_LABELS = {page:"ペイジ",knight:"ナイト",queen:"クイーン",king:"キング"};
+const COURT_ORDER = ["page","knight","queen","king"];
+
+const MINOR_CARDS = [];
+Object.keys(SUITS).forEach(suitKey=>{
+  const el = SUITS[suitKey];
+  for(let n=1;n<=10;n++){
+    const label = n===1 ? "1(エース)" : String(n);
+    MINOR_CARDS.push({
+      name:`${el.name}の${label}`,arcana:'minor',suitKey,isCourt:false,number:n,
+      structureLabel:'読みの構造',
+      upright:STAGE_TEXT[n].upright(el),
+      reversed:STAGE_TEXT[n].reversed(el)
+    });
+  }
+  COURT_ORDER.forEach(ck=>{
+    MINOR_CARDS.push({
+      name:`${el.name}の${COURT_LABELS[ck]}`,arcana:'minor',suitKey,isCourt:true,number:null,
+      structureLabel:'読みの構造',
+      upright:COURT_TEXT[ck].upright(el),
+      reversed:COURT_TEXT[ck].reversed(el)
+    });
+  });
+});
+
+const DECK = MAJOR_CARDS.concat(MINOR_CARDS);
+
+const REVERSAL_PATTERNS = {
+"000":"過去も現在も未来も、正位置が並んでいます。滞りが少なく、流れがスムーズに動いている配置です。ただし、抵抗が少ない分、立ち止まって確認する機会も少なくなりがちです。",
+"100":"引っかかりは過去の一枚だけに集中しています。過去に置いてきたものが、まだ少し尾を引いているようです。現在と未来には、すでにその影響は及んでいません。",
+"010":"逆位置は現在の一枚だけです。過去にも未来にも滞りは見られず、いま、この瞬間だけに、力の使い方の調整が必要になっているようです。",
+"001":"逆位置は未来の一枚だけに出ています。過去も現在も流れは順調で、これから先、一度だけ立ち止まって見直す場面がありそうです。",
+"110":"過去と現在、二枚続けて逆位置です。長く続いてきた滞りが、まだ現在にも影響しています。ただ、未来の一枚は正位置——ここで流れが変わる兆しがあります。",
+"101":"過去と未来が逆位置で、現在だけが正位置です。過去の課題がまだ残っている一方、今この瞬間は落ち着いています。ただ、未来にも同じ課題が形を変えて現れる可能性があります。",
+"011":"現在と未来、二枚が逆位置です。いまの滞りが、そのまま未来にも続いていく気配があります。過去は正位置なので、ヒントは過去の経験の中にありそうです。",
+"111":"三枚すべてが逆位置です。かなり内向きなエネルギーが強い配置ですが、これは悪いことだけを意味しません。すべてが内側に向かっているときは、外に出す前の、大事な熟成の時間でもあります。"
+};
+
+const POSITIONS = [{en:"past",jp:"過去"},{en:"present",jp:"現在"},{en:"future",jp:"未来"}];
+
+/* ===================== helpers ===================== */
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function createStars(n){
+  const cosmos = document.getElementById('cosmos');
+  for(let i=0;i<n;i++){
+    const s = document.createElement('div');
+    s.className='star';
+    const size = Math.random()*2+1;
+    s.style.width=size+'px';s.style.height=size+'px';
+    s.style.left=(Math.random()*100)+'%';s.style.top=(Math.random()*70)+'%';
+    s.style.animationDelay=(Math.random()*3.4)+'s';
+    cosmos.appendChild(s);
+  }
+}
+createStars(70);
+
+/* ===================== state ===================== */
+let deckPool = [];
+let picks = []; // {card, reversed}
+const FAN_COUNT = 24;
+
+function buildFan(){
+  const fan = document.getElementById('fan');
+  fan.innerHTML='';
+  const spreadDeg = 100;
+  for(let i=0;i<FAN_COUNT;i++){
+    const t = i/(FAN_COUNT-1);
+    const deg = -spreadDeg/2 + t*spreadDeg;
+    const el = document.createElement('div');
+    el.className='fan-card';
+    el.style.transform = `rotate(${deg}deg) translateY(-58px)`;
+    el.style.animationDelay = (i*0.02)+'s';
+    el.dataset.index = i;
+    el.innerHTML = '<span class="mark">✦</span>';
+    el.addEventListener('click', onFanCardClick);
+    fan.appendChild(el);
+  }
+}
+
+function resetGame(){
+  deckPool = shuffle(DECK);
+  picks = [];
+  buildFan();
+  document.querySelectorAll('.slot-card').forEach(sc=>{
+    sc.classList.remove('filled','flipped');
+    sc.querySelector('.slot-face.front').innerHTML='';
+  });
+  document.getElementById('progress').textContent = '気になるカードを、3枚選んでください（0 / 3）';
+  const sheet = document.getElementById('sheet');
+  sheet.classList.remove('open','collapsed');
+}
+
+function onFanCardClick(e){
+  if(picks.length>=3) return;
+  const el = e.currentTarget;
+  if(el.classList.contains('used')) return;
+  el.classList.add('used','picked');
+
+  const drawnCard = deckPool[picks.length];
+  const reversed = Math.random()<0.5;
+  const position = picks.length;
+  picks.push({card:drawnCard, reversed, position});
+
+  const rect = el.getBoundingClientRect();
+  const slotCard = document.querySelectorAll('.slot-card')[position];
+  const slotRect = slotCard.getBoundingClientRect();
+
+  el.style.transform='none';
+  el.style.left = rect.left+'px';
+  el.style.top = rect.top+'px';
+  el.style.width = rect.width+'px';
+  el.style.height = rect.height+'px';
+  el.classList.add('flying');
+
+  requestAnimationFrame(()=>{
+    el.style.left = (slotRect.left)+'px';
+    el.style.top = (slotRect.top)+'px';
+    el.style.width = slotRect.width+'px';
+    el.style.height = slotRect.height+'px';
+  });
+
+  setTimeout(()=>{
+    el.classList.add('gone');
+    slotCard.classList.add('filled');
+    document.getElementById('progress').textContent = picks.length<3
+      ? `気になるカードを、3枚選んでください（${picks.length} / 3）`
+      : 'カードが出そろいました';
+    if(picks.length>=3){
+      setTimeout(revealAll, 500);
+    }
+  },620);
+}
+
+function cardTag(card){
+  if(card.arcana==='major') return '大アルカナ';
+  const s = SUITS[card.suitKey];
+  const kind = card.isCourt ? card.name.slice(-3).replace(s.name,'') : `数札 ${card.number}`;
+  return `${s.name}(${s.element}) ・ 小アルカナ`;
+}
+
+function revealAll(){
+  picks.forEach((p,i)=>{
+    setTimeout(()=>{
+      const slotCard = document.querySelectorAll('.slot-card')[i];
+      const front = slotCard.querySelector('.slot-face.front');
+      const kanji = p.card.arcana==='major' ? '大' : SUITS[p.card.suitKey].kanji;
+      front.innerHTML = `<div class="kanji">${kanji}</div><div class="cname">${p.card.name}</div><div class="orient">${p.reversed?'逆位置':'正位置'}</div>`;
+      slotCard.classList.add('flipped');
+      if(i===picks.length-1){
+        setTimeout(buildSheet, 1100);
+      }
+    }, i*350);
+  });
+}
+
+function analyzeComposition(){
+  const majors = picks.filter(p=>p.card.arcana==='major');
+  const minors = picks.filter(p=>p.card.arcana==='minor');
+
+  let majorText;
+  if(majors.length===0) majorText = "大アルカナは入っていません。今回は、日常の中の具体的な行動や感情の動きに、答えのヒントがありそうです。";
+  else if(majors.length===1) majorText = `大アルカナが1枚——「${majors[0].card.name}」のテーマが、今回の芯にあります。`;
+  else if(majors.length===2) majorText = "大アルカナが2枚。日常の細かい動きよりも、大きな流れそのものが、今回の相談の中心にあるようです。";
+  else majorText = "大アルカナが3枚——過去・現在・未来のすべてが、人生の大きなテーマの中にあります。小さな出来事ではなく、生き方そのものに関わる問いのようです。";
+
+  let elementText = "";
+  if(minors.length>0){
+    const counts={};
+    minors.forEach(p=>{counts[p.card.suitKey]=(counts[p.card.suitKey]||0)+1;});
+    const entries=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+    if(entries.length===1 && entries[0][1]===minors.length){
+      const s=SUITS[entries[0][0]];
+      elementText = `引かれた小アルカナは${s.name}(${s.element})に偏っています。今回の相談の重心は、${s.domainLong}にありそうです。`;
+    } else {
+      const top=SUITS[entries[0][0]];
+      elementText = `引かれたカードの中では${top.name}(${top.element})が最も多く、${top.domainLong}が今回のテーマの重心になっているようです。`;
+    }
+  }
+
+  const patternKey = picks.map(p=>p.reversed?'1':'0').join('');
+  const reversalText = REVERSAL_PATTERNS[patternKey];
+
+  const pipPicks = picks.filter(p=>p.card.arcana==='minor' && !p.card.isCourt);
+  let numericText;
+  if(pipPicks.length>=2){
+    const nums = pipPicks.map(p=>p.card.number);
+    const isRising = nums.every((n,i)=> i===0 || n>=nums[i-1]) && nums[nums.length-1]>nums[0];
+    const isFalling = nums.every((n,i)=> i===0 || n<=nums[i-1]) && nums[nums.length-1]<nums[0];
+    if(isRising) numericText = `数字は${nums.join('→')}と、積み上がっていく流れです。少しずつ勢いが増しているサインです。`;
+    else if(isFalling) numericText = `数字は${nums.join('→')}と、下がっていく流れです。積み上げてきたものを、手放したり整理したりする段階かもしれません。`;
+    else numericText = `数字は${nums.join('→')}という並びです。上下はありますが、同じテーマを何度も行き来しながら深めているようです。`;
+  } else {
+    numericText = "数札が少ないため、数字の推移としての流れは、今回はあまり目立ちません。";
+  }
+
+  return [majorText, elementText, reversalText, numericText].filter(Boolean);
+}
+
+function buildSheet(){
+  const body = document.getElementById('sheet-body');
+  let html = `<div class="sheet-title"><span class="eyebrow">a reading from the table</span><h2>三枚のカード ─ 過去・現在・未来</h2></div>`;
+
+  picks.forEach((p,i)=>{
+    const pos = POSITIONS[i];
+    const c = p.reversed ? p.card.reversed : p.card.upright;
+    const messageHtml = c.message.split('\n\n').map(par=>`<p>${par}</p>`).join('');
+    const affirmationHtml = c.affirmation.map(line=>`<div>${line}</div>`).join('');
+    html += `
+    <div class="card-block">
+      <div class="card-position">${pos.en}</div>
+      <div class="card-position-jp">${pos.jp}</div>
+      <div class="card-tag">${cardTag(p.card)}</div>
+      <div class="card-name">${p.card.name}</div>
+      <div class="card-orientation">${p.reversed?'逆位置':'正位置'}</div>
+      <div class="card-message">${messageHtml}</div>
+      <div class="card-section">
+        <div class="section-label">【${p.card.structureLabel}】</div>
+        <div class="section-text">${c.structure}</div>
+      </div>
+      <div class="card-section">
+        <div class="section-label">【アドバイス】</div>
+        <div class="section-text">${c.advice}</div>
+      </div>
+      <div class="card-section">
+        <div class="section-label">【アファメーション】</div>
+        <div class="affirmation-text">${affirmationHtml}</div>
+      </div>
+    </div>`;
+  });
+
+  const comp = analyzeComposition();
+  html += `<div class="comp-section"><div class="comp-title">三枚の構成から</div><div class="comp-text">${comp.map(t=>`<p>${t}</p>`).join('')}</div></div>`;
+
+  html += `<div class="actions">
+    <button class="action-btn" id="copy-btn">テキストをコピー</button>
+    <button class="action-btn" id="redraw-btn">もう一度引く</button>
+  </div>`;
+
+  body.innerHTML = html;
+  document.getElementById('copy-btn').addEventListener('click', onCopy);
+  document.getElementById('redraw-btn').addEventListener('click', onRedraw);
+
+  const sheet = document.getElementById('sheet');
+  sheet.classList.add('open');
+  setTimeout(()=>sheet.scrollIntoView({behavior:'smooth',block:'end'}), 100);
+}
+
+function buildShareText(){
+  const lines = ['三枚のカード ─ 過去・現在・未来', ''];
+  picks.forEach((p,i)=>{
+    const pos = POSITIONS[i];
+    const c = p.reversed ? p.card.reversed : p.card.upright;
+    lines.push(`【${pos.jp}】${p.card.name}（${p.reversed?'逆位置':'正位置'}）`, '', c.message, '', `【${p.card.structureLabel}】`, c.structure, '', '【アドバイス】', c.advice, '', '【アファメーション】', c.affirmation.join('\n'), '', '---', '');
+  });
+  lines.push('【三枚の構成から】', ...analyzeComposition(), '');
+  return lines.join('\n');
+}
+
+async function copyToClipboard(text){
+  if(navigator.clipboard && window.isSecureContext){
+    try{ await navigator.clipboard.writeText(text); return true; }catch(e){}
+  }
+  try{
+    const ta=document.createElement('textarea');
+    ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.focus();ta.select();
+    const ok=document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  }catch(e){return false;}
+}
+
+function showToast(text){
+  const t=document.getElementById('toast');
+  t.textContent=text;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2000);
+}
+
+function onCopy(){
+  copyToClipboard(buildShareText()).then(ok=>showToast(ok?'コピーしました':'コピーに失敗しました'));
+}
+
+function onRedraw(){
+  const sheet=document.getElementById('sheet');
+  sheet.classList.remove('open','collapsed');
+  setTimeout(()=>{
+    resetGame();
+    window.scrollTo({top:0,behavior:'smooth'});
+  },400);
+}
+
+document.getElementById('sheet-handle').addEventListener('click',()=>{
+  document.getElementById('sheet').classList.toggle('collapsed');
+});
+
+document.getElementById('begin-overlay').addEventListener('click',function(){
+  this.style.opacity='0';
+  setTimeout(()=>{this.hidden=true;},600);
+});
+
+resetGame();
+</script>
+</body>
+</html>
